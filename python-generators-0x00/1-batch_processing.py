@@ -19,7 +19,9 @@ def stream_users_in_batches(batch_size):
         total_rows = cursor.fetchone()['count']
 
         for offset in range(0, total_rows, batch_size):
-            cursor.execute(f"SELECT * FROM user_data LIMIT {batch_size} OFFSET {offset}")
+            cursor.execute(
+                f"SELECT * FROM user_data LIMIT {batch_size} OFFSET {offset}"
+            )
             batch = cursor.fetchall()
             if batch:
                 yield batch
@@ -28,10 +30,12 @@ def stream_users_in_batches(batch_size):
         conn.close()
 
 def batch_processing(batch_size):
-    """Process each batch: print users over age 25"""
+    """Process each batch: return users over age 25"""
+    filtered_users = []
     for batch in stream_users_in_batches(batch_size):
         for user in batch:
-            # convert age to int for safety (if age is Decimal or str from MySQL)
-            age = int(user['age'])
+            age = int(user['age'])  # convert age to int for safety
             if age > 25:
                 print(user)
+                filtered_users.append(user)
+    return filtered_users
