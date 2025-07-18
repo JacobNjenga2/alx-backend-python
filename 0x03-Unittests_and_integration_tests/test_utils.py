@@ -1,16 +1,10 @@
 #!/usr/bin/env python3
 """Unittests for utils module."""
 
-import sys
-import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
 import unittest
 from parameterized import parameterized  # type: ignore
 from unittest.mock import patch, Mock
-
-from utils import access_nested_map, get_json
-from utils import memoize
+from utils import access_nested_map, get_json, memoize
 
 class TestAccessNestedMap(unittest.TestCase):
     """Test cases for the access_nested_map utility function."""
@@ -21,9 +15,7 @@ class TestAccessNestedMap(unittest.TestCase):
         ({"a": {"b": 2}}, ("a", "b"), 2),
     ])
     def test_access_nested_map(self, nested_map, path, expected):
-        """
-        Test that access_nested_map returns expected result for various inputs.
-        """
+        """Test that access_nested_map returns expected result for various inputs."""
         self.assertEqual(access_nested_map(nested_map, path), expected)
 
     @parameterized.expand([
@@ -31,12 +23,11 @@ class TestAccessNestedMap(unittest.TestCase):
         ({"a": 1}, ("a", "b"), 'b'),
     ])
     def test_access_nested_map_exception(self, nested_map, path, expected_key):
-        """
-        Test that KeyError is raised with correct message.
-        """
+        """Test that KeyError is raised with correct message."""
         with self.assertRaises(KeyError) as cm:
             access_nested_map(nested_map, path)
         self.assertEqual(str(cm.exception), repr(expected_key))
+
 
 class TestGetJson(unittest.TestCase):
     """Test cases for the get_json utility function."""
@@ -48,7 +39,8 @@ class TestGetJson(unittest.TestCase):
     @patch("utils.requests.get")
     def test_get_json(self, test_url, test_payload, mock_get):
         """
-        Test that get_json returns the expected result and calls requests.get once.
+        Test that get_json returns the expected result and
+        calls requests.get once.
         """
         mock_response = Mock()
         mock_response.json.return_value = test_payload
@@ -58,6 +50,7 @@ class TestGetJson(unittest.TestCase):
 
         mock_get.assert_called_once_with(test_url)
         self.assertEqual(result, test_payload)
+
 
 class TestMemoize(unittest.TestCase):
     """Test cases for the memoize decorator."""
@@ -83,6 +76,7 @@ class TestMemoize(unittest.TestCase):
             self.assertEqual(result1, 42)
             self.assertEqual(result2, 42)
             mock_method.assert_called_once()
+
 
 if __name__ == '__main__':
     unittest.main()
