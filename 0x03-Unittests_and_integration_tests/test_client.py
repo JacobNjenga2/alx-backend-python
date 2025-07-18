@@ -3,14 +3,13 @@
 
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
-
 import unittest
 from unittest.mock import patch, PropertyMock
 from parameterized import parameterized, parameterized_class
 from client import GithubOrgClient
 from fixtures import TEST_PAYLOAD
 
+sys.path.append(os.path.abspath(os.path.dirname(__file__) + '/../..'))
 org_payload, repos_payload, expected_repos, apache2_repos = TEST_PAYLOAD[0]
 
 
