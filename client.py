@@ -12,6 +12,8 @@ from utils import (
     memoize,
 )
 
+from utils import get_json
+
 
 class GithubOrgClient:
     """A Githib org client
