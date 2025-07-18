@@ -3,28 +3,32 @@
 
 import unittest
 from unittest.mock import patch
-from parameterized import parameterized # type: ignore
+from parameterized import parameterized  # type: ignore
 from client import GithubOrgClient
 
 class TestGithubOrgClient(unittest.TestCase):
     """Test cases for GithubOrgClient"""
 
     @parameterized.expand([
-        ("google", {"login": "google", "id": 1}),
-        ("abc", {"login": "abc", "id": 2}),
+        ("google",),
+        ("abc",),
+        ("alx",),
+        ("github",),
+        ("holberton",),
+        ("microsoft",),
+        ("openai",),
+        ("apple",),
     ])
-    @patch('client.get_json')
-    def test_org(self, org_name, payload, mock_get_json):
-        """
-        Test that GithubOrgClient.org returns expected data
-          and calls get_json
-        """
-        mock_get_json.return_value = payload
-        client = GithubOrgClient(org_name)
-        self.assertEqual(client.org, payload)
-        mock_get_json.assert_called_once_with(
-            f"https://api.github.com/orgs/{org_name}"
-        )
+    def test_org(self, org_name):
+        """Test that GithubOrgClient.org returns expected data and calls get_json"""
+        payload = {"login": org_name}
+        with patch('client.get_json') as mock_get_json:
+            mock_get_json.return_value = payload
+            client = GithubOrgClient(org_name)
+            self.assertEqual(client.org, payload)
+            mock_get_json.assert_called_once_with(
+                f"https://api.github.com/orgs/{org_name}"
+            )
 
 if __name__ == '__main__':
     unittest.main()
