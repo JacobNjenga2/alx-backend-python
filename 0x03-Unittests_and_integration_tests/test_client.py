@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unittests for client.GithubOrgClient"""
 
-from parameterized import parameterized # type: ignore
+from parameterized import parameterized  # type: ignore
 from unittest.mock import patch, PropertyMock
 import unittest
 
@@ -84,6 +84,6 @@ class TestGithubOrgClient(unittest.TestCase):
             mock_url.assert_called_once()
             mock_get_json.assert_called_once_with(test_url)
 
+
 if __name__ == "__main__":
     unittest.main()
-
