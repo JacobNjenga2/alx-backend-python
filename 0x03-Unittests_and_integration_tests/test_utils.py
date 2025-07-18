@@ -15,7 +15,8 @@ class TestAccessNestedMap(unittest.TestCase):
         ({"a": {"b": 2}}, ("a",), {"b": 2}),
         ({"a": {"b": 2}}, ("a", "b"), 2),
     ])
-    def test_access_nested_map(self, nested_map, path, expected):
+    def test_access_nested_map(
+        self, nested_map, path, expected):
         """Test that access_nested_map returns expected result for various inputs."""
         self.assertEqual(
             access_nested_map(nested_map, path),
@@ -26,7 +27,8 @@ class TestAccessNestedMap(unittest.TestCase):
         ({}, ("a",), 'a'),
         ({"a": 1}, ("a", "b"), 'b'),
     ])
-    def test_access_nested_map_exception(self, nested_map, path, expected_key):
+    def test_access_nested_map_exception(
+        self, nested_map, path, expected_key):
         """Test that KeyError is raised with correct message."""
         with self.assertRaises(KeyError) as cm:
             access_nested_map(nested_map, path)
@@ -70,7 +72,9 @@ class TestMemoize(unittest.TestCase):
             def a_property(self):
                 return self.a_method()
 
-        with patch.object(TestClass, "a_method", return_value=42) as mock_method:
+        with patch.object(
+            TestClass, "a_method", return_value=42
+        ) as mock_method:
             test_instance = TestClass()
             # First access triggers the method
             result1 = test_instance.a_property
@@ -84,3 +88,4 @@ class TestMemoize(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
