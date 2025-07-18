@@ -5,6 +5,8 @@ from rest_framework import serializers
 from .models import CustomUser, Conversation, Message
 
 class UserSerializer(serializers.ModelSerializer):
+    phone_number = serializers.CharField(required=False, allow_blank=True)
+
     class Meta:
         model = CustomUser
         fields = [
@@ -17,7 +19,8 @@ class UserSerializer(serializers.ModelSerializer):
         ]
 
 class MessageSerializer(serializers.ModelSerializer):
-    sender = UserSerializer(read_only=True)
+    sender = serializers.CharField(source="sender.username", read_only=True)
+    message_body = serializers.CharField()
 
     class Meta:
         model = Message
@@ -28,9 +31,14 @@ class MessageSerializer(serializers.ModelSerializer):
             "sent_at",
         ]
 
+    def validate_message_body(self, value):
+        if not value.strip():
+            raise serializers.ValidationError("Message body cannot be empty.")
+        return value
+
 class ConversationSerializer(serializers.ModelSerializer):
     participants = UserSerializer(many=True, read_only=True)
-    messages = MessageSerializer(many=True, read_only=True, source="messages")
+    messages = serializers.SerializerMethodField()
 
     class Meta:
         model = Conversation
@@ -40,3 +48,8 @@ class ConversationSerializer(serializers.ModelSerializer):
             "created_at",
             "messages",
         ]
+
+    def get_messages(self, obj):
+        # Returns all messages for this conversation
+        messages = obj.messages.all().order_by('sent_at')
+        return MessageSerializer(messages, many=True).data
