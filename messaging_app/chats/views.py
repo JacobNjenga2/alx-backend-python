@@ -6,6 +6,13 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
+from .models import Chat
+from .serializers import ChatSerializer
+
+class ChatViewSet(viewsets.ModelViewSet):
+    queryset = Chat.objects.all()
+    serializer_class = ChatSerializer
+
 
 class ConversationViewSet(viewsets.ModelViewSet):
     queryset = Conversation.objects.all().prefetch_related("participants", "messages")
@@ -30,4 +37,10 @@ class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['sender__username', 'conversation__conversation_id', 'message_body']
+
+    def get_queryset(self):
+        # Filters messages by parent chat ID from nested URL
+        return Message.objects.filter(chat_id=self.kwargs['chat_pk'])
+
+
 

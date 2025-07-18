@@ -13,6 +13,7 @@ class CustomUser(AbstractUser):
     # first_name, last_name, password already provided by AbstractUser
 
     REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
+    pass
 
     def __str__(self):
         return self.username
@@ -36,4 +37,12 @@ class Message(models.Model):
 
     def __str__(self):
         return f"Message {self.message_id} from {self.sender}"
+    
+class Chat(models.Model):
+    name = models.CharField(max_length=100)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return self.name
+
 

@@ -3,6 +3,12 @@
 
 from rest_framework import serializers
 from .models import CustomUser, Conversation, Message
+from .models import Chat
+
+class ChatSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Chat
+        fields = '__all__'  # Or list specific fields like ['id', 'name', 'created_at']
 
 class UserSerializer(serializers.ModelSerializer):
     phone_number = serializers.CharField(required=False, allow_blank=True)
