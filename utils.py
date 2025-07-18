@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Generic utilities for github org client.
 """
+
 import requests
 from functools import wraps
 from typing import (
@@ -17,6 +18,11 @@ __all__ = [
     "memoize",
 ]
 
+"""Utility functions for GithubOrgClient"""
+
+def get_json(url):
+    """Mocked get_json function for testing"""
+    return {"login": "mocked_org"}
 
 def access_nested_map(nested_map: Mapping, path: Sequence) -> Any:
     """Access nested map with key path.

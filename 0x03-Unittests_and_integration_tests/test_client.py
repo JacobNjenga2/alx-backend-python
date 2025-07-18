@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Unittests for client.GithubOrgClient"""
 
-from parameterized import parameterized
+from parameterized import parameterized # type: ignore
 from unittest.mock import patch, PropertyMock
 import unittest
 
@@ -17,7 +17,8 @@ class TestGithubOrgClient(unittest.TestCase):
     ])
     @patch("client.get_json")
     def test_org(self, org_name, mock_get_json):
-        """Test that GithubOrgClient.org returns expected data and calls get_json"""
+        """Test that GithubOrgClient.org returns expected data
+          and calls get_json"""
         test_payload = {"login": org_name, "id": 1}
         mock_get_json.return_value = test_payload
 
@@ -39,7 +40,8 @@ class TestGithubOrgClient(unittest.TestCase):
     ])
     def test_public_repos_url(self, org_name):
         """
-        Test that _public_repos_url returns correct URL from mocked org property
+        Test that _public_repos_url returns correct
+          URL from mocked org property
         """
         payload = {
             "repos_url": (
@@ -59,7 +61,8 @@ class TestGithubOrgClient(unittest.TestCase):
     @patch("client.get_json")
     def test_public_repos(self, mock_get_json):
         """
-        Test that public_repos returns expected repo names and mocks are called once
+        Test that public_repos returns expected
+          repo names and mocks are called once
         """
         payload = [
             {"name": "repo1"},
@@ -80,7 +83,6 @@ class TestGithubOrgClient(unittest.TestCase):
             self.assertEqual(result, ["repo1", "repo2", "repo3"])
             mock_url.assert_called_once()
             mock_get_json.assert_called_once_with(test_url)
-
 
 if __name__ == "__main__":
     unittest.main()
