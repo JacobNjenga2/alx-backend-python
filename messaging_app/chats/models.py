@@ -1,40 +1,39 @@
 #!/usr/bin/env python3
-"""Models for messaging app: CustomUser, Conversation, and Message."""
+"""Models for chats app in messaging_app."""
 
+import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
-from django.conf import settings
 
-# 1. Extend Django's User model
 class CustomUser(AbstractUser):
-    """Custom user model. Extend with extra fields if needed (e.g., bio, profile_pic)."""
-    # Add custom fields here if you want
-    # bio = models.TextField(blank=True, null=True)
-    pass
+    """Custom user model extending AbstractUser with additional fields."""
+    user_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
+    email = models.EmailField(unique=True)
+    phone_number = models.CharField(max_length=20, blank=True, null=True)
+    # first_name, last_name, password already provided by AbstractUser
 
-# 2. Conversation Model (Many users per conversation)
+    REQUIRED_FIELDS = ['email', 'first_name', 'last_name']
+
+    def __str__(self):
+        return self.username
+
 class Conversation(models.Model):
-    """Represents a conversation between multiple users."""
-    participants = models.ManyToManyField(
-        settings.AUTH_USER_MODEL, related_name="conversations"
-    )
+    """Conversation between users."""
+    conversation_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
+    participants = models.ManyToManyField(CustomUser, related_name='conversations')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"Conversation {self.pk} ({self.participants.count()} participants)"
+        return f"Conversation {self.conversation_id}"
 
-# 3. Message Model
 class Message(models.Model):
-    """A message sent in a conversation."""
-    conversation = models.ForeignKey(
-        Conversation, related_name="messages", on_delete=models.CASCADE
-    )
-    sender = models.ForeignKey(
-        settings.AUTH_USER_MODEL, related_name="sent_messages", on_delete=models.CASCADE
-    )
-    text = models.TextField()
-    timestamp = models.DateTimeField(auto_now_add=True)
+    """Message sent by a user in a conversation."""
+    message_id = models.UUIDField(default=uuid.uuid4, editable=False, unique=True, primary_key=True)
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(CustomUser, on_delete=models.CASCADE, related_name='messages')
+    message_body = models.TextField()
+    sent_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.sender.username}: {self.text[:30]}"
+        return f"Message {self.message_id} from {self.sender}"
 
