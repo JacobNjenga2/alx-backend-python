@@ -137,18 +137,31 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'chats.pagination.MessagePagination',  # Use your custom class
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ],
+}
+
+
+REST_FRAMEWORK = {
+    # 🚧 Authentication & Permissions
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',  # Require authentication by default
+        'rest_framework.permissions.IsAuthenticated',  # Require auth by default
     ],
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',  # Uses Django’s login system
-        'rest_framework.authentication.BasicAuthentication',    # Useful for testing via browser
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
-
+        'rest_framework.authentication.SessionAuthentication',  # Django login system
+        'rest_framework.authentication.BasicAuthentication',    # Useful for browsable API testing
+        'rest_framework_simplejwt.authentication.JWTAuthentication',  # Secure token-based auth
     ],
 
+    # 🧹 Filtering
     'DEFAULT_FILTER_BACKENDS': [
-            'django_filters.rest_framework.DjangoFilterBackend'
-        ],
+        'django_filters.rest_framework.DjangoFilterBackend'
+    ],
 
+    # 📦 Pagination
+    'DEFAULT_PAGINATION_CLASS': 'chats.pagination.MessagePagination',
+    'PAGE_SIZE': 20,
 }
