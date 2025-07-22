@@ -13,6 +13,12 @@ from .permissions import (
     IsConversationParticipantAndMethodAllowed
 )
 from .auth import get_authenticated_user
+from .filters import MessageFilter
+from .pagination import MessagePagination
+from .models import Message
+from .serializers import MessageSerializer
+import django_filters.rest_framework
+
 
 
 class ChatViewSet(viewsets.ModelViewSet):
@@ -26,6 +32,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['participants__username']
+
 
     def get_queryset(self):
         return Conversation.objects.filter(participants=self.request.user)
@@ -49,6 +56,8 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all().select_related("conversation", "sender")
     serializer_class = MessageSerializer
     filter_backends = [filters.SearchFilter]
+    pagination_class = MessagePagination
+    filterset_class = MessageFilter
     permission_classes = [IsAuthenticated, IsConversationParticipantAndMethodAllowed]
     search_fields = ['sender__username', 'conversation__conversation_id', 'message_body']
 
