@@ -14,9 +14,12 @@ from pathlib import Path
 from datetime import timedelta
 
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),   # 1 hour tokens
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
     'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
-    'AUTH_HEADER_TYPES': ('Bearer',),                 # Token must be prefixed with Bearer
+    'AUTH_TOKEN_CLASSES': (
+        'rest_framework_simplejwt.tokens.AccessToken',
+    ),
+    'TOKEN_OBTAIN_SERIALIZER': 'messaging_app.chats.auth.CustomTokenObtainPairSerializer',
 }
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
