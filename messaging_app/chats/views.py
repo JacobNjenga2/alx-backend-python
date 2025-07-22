@@ -9,6 +9,15 @@ from .serializers import ConversationSerializer, MessageSerializer
 from .models import Chat
 from .serializers import ChatSerializer
 from .permissions import IsOwnerOrReadOnly
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import status
+from .permissions import IsConversationParticipantAndMethodAllowed
+
+class MessageViewSet(ModelViewSet):
+    permission_classes = [IsAuthenticated, IsConversationParticipantAndMethodAllowed]
+
+    def handle_no_permission(self):
+        return Response({'detail': 'You are not allowed to access this message.'}, status=status.HTTP_403_FORBIDDEN)
 
 class ChatViewSet(viewsets.ModelViewSet):
     queryset = Chat.objects.all()
