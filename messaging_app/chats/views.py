@@ -8,6 +8,7 @@ from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
 from .models import Chat
 from .serializers import ChatSerializer
+from .permissions import IsOwnerOrReadOnly
 
 class ChatViewSet(viewsets.ModelViewSet):
     queryset = Chat.objects.all()
@@ -19,6 +20,9 @@ class ConversationViewSet(viewsets.ModelViewSet):
     serializer_class = ConversationSerializer
     filter_backends = [filters.SearchFilter]
     search_fields = ['participants__username']
+
+     def get_queryset(self):
+        return Conversation.objects.filter(users=self.request.user)
 
     @action(detail=True, methods=['post'])
     def send_message(self, request, pk=None):
@@ -36,11 +40,15 @@ class MessageViewSet(viewsets.ModelViewSet):
     queryset = Message.objects.all().select_related("conversation", "sender")
     serializer_class = MessageSerializer
     filter_backends = [filters.SearchFilter]
+    permission_classes = [IsOwnerOrReadOnly]
     search_fields = ['sender__username', 'conversation__conversation_id', 'message_body']
 
     def get_queryset(self):
-        # Filters messages by parent chat ID from nested URL
-        return Message.objects.filter(chat_id=self.kwargs['chat_pk'])
+        # Filters messages by parent chat ID and current user
+        return Message.objects.filter(
+            chat_id=self.kwargs['chat_pk'],
+            conversation__users=self.request.user
+        )
 
 
 
