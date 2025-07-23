@@ -2,7 +2,7 @@
 	"info": {
 		"_postman_id": "124e0d05-d77c-48da-ae4b-0720eadbd8c9",
 		"name": "Messaging App API",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
 		"_exporter_id": "46969960"
 	},
 	"item": [
@@ -20,19 +20,7 @@
 						}
 					}
 				},
-				"url": {
-					"raw": "http://localhost:8000/api/token/",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8000",
-					"path": [
-						"api",
-						"token",
-						""
-					]
-				}
+				"url": "http://localhost:8000/api/token/"
 			},
 			"response": [
 				{
@@ -49,19 +37,7 @@
 								}
 							}
 						},
-						"url": {
-							"raw": "http://localhost:8000/api/token/",
-							"protocol": "http",
-							"host": [
-								"localhost"
-							],
-							"port": "8000",
-							"path": [
-								"api",
-								"token",
-								""
-							]
-						}
+						"url": "http://localhost:8000/api/token/"
 					},
 					"status": "OK",
 					"code": 200,
@@ -127,19 +103,7 @@
 						}
 					}
 				},
-				"url": {
-					"raw": "http://localhost:8000/api/conversations/",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8000",
-					"path": [
-						"api",
-						"conversations",
-						""
-					]
-				}
+				"url": "http://localhost:8000/api/conversations/"
 			},
 			"response": []
 		},
@@ -157,19 +121,7 @@
 						}
 					}
 				},
-				"url": {
-					"raw": "http://localhost:8000/api/messages/",
-					"protocol": "http",
-					"host": [
-						"localhost"
-					],
-					"port": "8000",
-					"path": [
-						"api",
-						"messages",
-						""
-					]
-				}
+				"url": "http://localhost:8000/api/messages/"
 			},
 			"response": []
 		},
