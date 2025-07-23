@@ -19,7 +19,7 @@ SIMPLE_JWT = {
     'AUTH_TOKEN_CLASSES': (
         'rest_framework_simplejwt.tokens.AccessToken',
     ),
-    'TOKEN_OBTAIN_SERIALIZER': 'messaging_app.chats.auth.CustomTokenObtainPairSerializer',
+    'TOKEN_OBTAIN_SERIALIZER': 'chats.auth.CustomTokenObtainPairSerializer',
 }
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
