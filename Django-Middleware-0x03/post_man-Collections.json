@@ -1,0 +1,183 @@
+{
+	"info": {
+		"_postman_id": "124e0d05-d77c-48da-ae4b-0720eadbd8c9",
+		"name": "Messaging App API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.0.0/collection.json",
+		"_exporter_id": "46969960"
+	},
+	"item": [
+		{
+			"name": "test",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"username\": \"Jacobn\",\r\n  \"password\": \"P@ssw0rd!\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8000/api/token/"
+			},
+			"response": [
+				{
+					"name": "test",
+					"originalRequest": {
+						"method": "POST",
+						"header": [],
+						"body": {
+							"mode": "raw",
+							"raw": "{\r\n  \"username\": \"Jacobn\",\r\n  \"password\": \"P@ssw0rd!\"\r\n}\r\n",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": "http://localhost:8000/api/token/"
+					},
+					"status": "OK",
+					"code": 200,
+					"_postman_previewlanguage": "json",
+					"header": [
+						{
+							"key": "Date",
+							"value": "Wed, 23 Jul 2025 10:50:40 GMT"
+						},
+						{
+							"key": "Server",
+							"value": "WSGIServer/0.2 CPython/3.12.2"
+						},
+						{
+							"key": "Content-Type",
+							"value": "application/json"
+						},
+						{
+							"key": "Vary",
+							"value": "Accept"
+						},
+						{
+							"key": "Allow",
+							"value": "POST, OPTIONS"
+						},
+						{
+							"key": "X-Frame-Options",
+							"value": "DENY"
+						},
+						{
+							"key": "Content-Length",
+							"value": "723"
+						},
+						{
+							"key": "X-Content-Type-Options",
+							"value": "nosniff"
+						},
+						{
+							"key": "Referrer-Policy",
+							"value": "same-origin"
+						},
+						{
+							"key": "Cross-Origin-Opener-Policy",
+							"value": "same-origin"
+						}
+					],
+					"cookie": [],
+					"body": "{\n    \"refresh\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoicmVmcmVzaCIsImV4cCI6MTc1MzM1NDI0MCwiaWF0IjoxNzUzMjY3ODQwLCJqdGkiOiI1MmZmMmJjNGQ5Zjc0Yjk2OWZhMzAwMTM5OWM5NDViMSIsInVzZXJfaWQiOiI4YzBkYjY4Yi04YmJlLTRlYWMtOTE5OS0yZWQ5OWM2ZGVkNjUiLCJ1c2VybmFtZSI6IkphY29ibiIsImVtYWlsIjoibmplbmdhamFjb2JuQGdtYWlsLmNvbSJ9.4eyi6qjwv9bnBB9TdeRgGVQvSBKQSxY2YbFE0iZBjuw\",\n    \"access\": \"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzUzMjcxNDQwLCJpYXQiOjE3NTMyNjc4NDAsImp0aSI6ImVhM2NlNWU4NGRiNjRiMjA4NTkzODEwNTZkOGRkMWI1IiwidXNlcl9pZCI6IjhjMGRiNjhiLThiYmUtNGVhYy05MTk5LTJlZDk5YzZkZWQ2NSIsInVzZXJuYW1lIjoiSmFjb2JuIiwiZW1haWwiOiJuamVuZ2FqYWNvYm5AZ21haWwuY29tIn0.D2WiCin0uUZedUcPmHHLiyw2JjqAeUVz_SM5df3sR8M\"\n}"
+				}
+			]
+		},
+		{
+			"name": "api-conversations",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"participants\": [user_id1, user_id2]  \r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8000/api/conversations/"
+			},
+			"response": []
+		},
+		{
+			"name": "api-messages",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"conversation\": conversation_id,\r\n  \"sender\": user_id,\r\n  \"message_body\": \"Hello there!\"\r\n}\r\n",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": "http://localhost:8000/api/messages/"
+			},
+			"response": []
+		},
+		{
+			"name": "api_conversations",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/api/conversations/?page=1",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"conversations",
+						""
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "1"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "api_messages",
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "http://localhost:8000/api/messages/?conversation=conversation_id",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8000",
+					"path": [
+						"api",
+						"messages",
+						""
+					],
+					"query": [
+						{
+							"key": "conversation",
+							"value": "conversation_id"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
