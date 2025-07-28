@@ -50,6 +50,7 @@ MIDDLEWARE = [
     'chats.middleware.RequestLoggingMiddleware',  # Logs all requests
     'chats.middleware.OffensiveLanguageMiddleware',  # Limits chat messages per IP
     'chats.middleware.RolepermissionMiddleware',  # Enforces admin/moderator role
+    'chats.middleware.RestrictAccessByTimeMiddleware',
     'chats.restrict_middleware.RestrictAccessByTimeMiddleware',  # Time-based access control
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
