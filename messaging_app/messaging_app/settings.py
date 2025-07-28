@@ -60,9 +60,15 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'chats.middleware.RequestLoggingMiddleware',  # Logs all requests
+    'chats.middleware.OffensiveLanguageMiddleware',  # Limits chat messages per IP
+    'chats.middleware.RolepermissionMiddleware',  # Enforces admin/moderator role
+    'chats.middleware.RestrictAccessByTimeMiddleware',
+    'chats.restrict_middleware.RestrictAccessByTimeMiddleware',  # Time-based access control
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 ROOT_URLCONF = 'messaging_app.urls'
 
