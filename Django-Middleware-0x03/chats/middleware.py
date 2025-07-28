@@ -54,3 +54,16 @@ class OffensiveLanguageMiddleware:
             ip = request.META.get('REMOTE_ADDR')
         return ip
 
+class RolepermissionMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+
+    def __call__(self, request):
+        # Restrict access to /chat/admin or /chat/moderate endpoints
+        if request.path.startswith('/chat/admin') or request.path.startswith('/chat/moderate'):
+            user = request.user
+            # Check for admin or moderator role
+            if not user.is_authenticated or not (getattr(user, 'role', None) in ['admin', 'moderator'] or user.is_superuser):
+                return HttpResponseForbidden('You do not have permission to perform this action.')
+        return self.get_response(request)
+
