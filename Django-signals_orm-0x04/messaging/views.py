@@ -14,21 +14,8 @@ def delete_user(request):
     return HttpResponse("Send a POST request to delete your account.")
 
 def message_thread_view(request, message_id):
-    # Fetch the root message with sender and receiver info
-    root_message = get_object_or_404(
-        Message.objects.select_related('sender', 'receiver').prefetch_related('replies'),
-        pk=message_id
-    )
-
-    # Recursive function to build the thread
-    def build_thread(message):
-        replies = message.replies.all().select_related('sender', 'receiver').prefetch_related('replies')
-        return {
-            'message': message,
-            'replies': [build_thread(reply) for reply in replies]
-        }
-
-    thread = build_thread(root_message)
+    # Use the manager's optimized recursive function
+    thread = Message.objects.get_threaded_conversation(message_id)
     return render(request, 'messaging/thread.html', {'thread': thread})
 
 @login_required
