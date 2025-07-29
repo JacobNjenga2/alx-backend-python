@@ -3,6 +3,19 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+class UnreadMessagesManager(models.Manager):
+    def get_unread_messages(self, user):
+        """Get unread messages for a specific user with optimized query."""
+        return self.filter(
+            receiver=user,
+            read=False
+        ).select_related('sender').only(
+            'sender__username',
+            'content',
+            'timestamp',
+            'read'
+        )
+
 class Message(models.Model):
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)
     receiver = models.ForeignKey(User, related_name='received_messages', on_delete=models.CASCADE)
@@ -12,9 +25,20 @@ class Message(models.Model):
     edited_at = models.DateTimeField(null=True, blank=True)
     edited_by = models.ForeignKey(User, null=True, blank=True, related_name='edited_messages', on_delete=models.SET_NULL)
     parent_message = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE)
+    read = models.BooleanField(default=False)  # New field for tracking read status
+
+    # Managers
+    objects = models.Manager()  # Default manager
+    unread = UnreadMessagesManager()  # Custom manager for unread messages
 
     def __str__(self):
         return f"From {self.sender} to {self.receiver} at {self.timestamp}"
+
+    def mark_as_read(self):
+        """Utility method to mark a message as read."""
+        if not self.read:
+            self.read = True
+            self.save(update_fields=['read'])
 
 class MessageHistory(models.Model):
     message = models.ForeignKey(Message, related_name='history', on_delete=models.CASCADE)
