@@ -1,20 +1,8 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from .managers import UnreadMessagesManager
 
 User = get_user_model()
-
-class UnreadMessagesManager(models.Manager):
-    def get_unread_messages(self, user):
-        """Get unread messages for a specific user with optimized query."""
-        return self.filter(
-            receiver=user,
-            read=False
-        ).select_related('sender').only(
-            'sender__username',
-            'content',
-            'timestamp',
-            'read'
-        )
 
 class Message(models.Model):
     sender = models.ForeignKey(User, related_name='sent_messages', on_delete=models.CASCADE)

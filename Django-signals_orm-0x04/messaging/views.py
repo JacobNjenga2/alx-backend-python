@@ -54,3 +54,11 @@ def reply_to_message(request, message_id):
             parent_message=parent
         )
         return redirect('message_thread_view', message_id=parent.pk)
+
+@login_required
+def inbox_view(request):
+    # Use the custom manager to get unread messages
+    unread_messages = Message.unread.unread_for_user(request.user)
+    return render(request, 'messaging/inbox.html', {
+        'unread_messages': unread_messages
+    })
