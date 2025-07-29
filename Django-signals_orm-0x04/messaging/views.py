@@ -13,9 +13,33 @@ def delete_user(request):
         return redirect('logout')  # Redirect to logout or homepage after deletion
     return HttpResponse("Send a POST request to delete your account.")
 
+@login_required
 def message_thread_view(request, message_id):
-    # Use the manager's optimized recursive function
-    thread = Message.objects.get_threaded_conversation(message_id)
+    # Get the root message with all related data
+    root_message = Message.objects.filter(pk=message_id)\
+        .select_related('sender', 'receiver')\
+        .prefetch_related('replies__sender', 'replies__receiver')\
+        .first()
+    
+    if not root_message:
+        return HttpResponse("Message not found", status=404)
+
+    # Build the thread structure
+    def get_replies(message):
+        replies = Message.objects.filter(parent_message=message)\
+            .select_related('sender', 'receiver')\
+            .prefetch_related('replies')
+        
+        return [{
+            'message': reply,
+            'replies': get_replies(reply)
+        } for reply in replies]
+
+    thread = {
+        'message': root_message,
+        'replies': get_replies(root_message)
+    }
+
     return render(request, 'messaging/thread.html', {'thread': thread})
 
 @login_required
