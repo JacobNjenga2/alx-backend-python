@@ -57,18 +57,8 @@ def reply_to_message(request, message_id):
 
 @login_required
 def inbox_view(request):
-    # Get unread messages with optimized field selection
-    unread_messages = Message.objects.filter(
-        receiver=request.user,
-        read=False
-    ).select_related('sender').only(
-        'id',
-        'content',
-        'timestamp',
-        'read',
-        'sender__username'
-    )
-    
+    # Use the custom UnreadMessagesManager to get unread messages
+    unread_messages = Message.unread.unread_for_user(request.user)
     return render(request, 'messaging/inbox.html', {
         'unread_messages': unread_messages
     })
