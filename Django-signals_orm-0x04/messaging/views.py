@@ -1,4 +1,5 @@
 from django.contrib.auth.decorators import login_required
+from django.views.decorators.cache import cache_page
 from django.shortcuts import redirect, render, get_object_or_404
 from django.http import HttpResponse
 from django.db import transaction
@@ -13,6 +14,7 @@ def delete_user(request):
         return redirect('logout')  # Redirect to logout or homepage after deletion
     return HttpResponse("Send a POST request to delete your account.")
 
+@cache_page(60)  # Cache for 60 seconds
 @login_required
 def message_thread_view(request, message_id):
     # Get the root message with all related data
