@@ -19,7 +19,15 @@ def message_thread_view(request, message_id):
     root_message = Message.objects.filter(pk=message_id)\
         .select_related('sender', 'receiver')\
         .prefetch_related('replies__sender', 'replies__receiver')\
-        .first()
+        .only(
+            'id', 
+            'content',
+            'timestamp',
+            'sender__username',
+            'receiver__username',
+            'edited',
+            'edited_at'
+        ).first()
     
     if not root_message:
         return HttpResponse("Message not found", status=404)
@@ -28,7 +36,16 @@ def message_thread_view(request, message_id):
     def get_replies(message):
         replies = Message.objects.filter(parent_message=message)\
             .select_related('sender', 'receiver')\
-            .prefetch_related('replies')
+            .prefetch_related('replies')\
+            .only(
+                'id',
+                'content',
+                'timestamp',
+                'sender__username',
+                'receiver__username',
+                'edited',
+                'edited_at'
+            )
         
         return [{
             'message': reply,
@@ -57,8 +74,15 @@ def reply_to_message(request, message_id):
 
 @login_required
 def inbox_view(request):
-    # Use the custom UnreadMessagesManager to get unread messages
-    unread_messages = Message.unread.unread_for_user(request.user)
+    # Use the custom UnreadMessagesManager with field optimization
+    unread_messages = Message.unread.unread_for_user(request.user)\
+        .only(
+            'id',
+            'content',
+            'timestamp',
+            'sender__username',
+            'read'
+        )
     return render(request, 'messaging/inbox.html', {
         'unread_messages': unread_messages
     })
