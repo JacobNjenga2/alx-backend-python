@@ -1,0 +1,263 @@
+# Blue-Green Deployment Configuration
+# This file contains the blue (current) and green (new) versions of the Django app
+
+---
+# Blue Deployment (Current Version v1.0)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-messaging-blue
+  labels:
+    app: django-messaging
+    version: v1.0
+    color: blue
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: django-messaging
+      color: blue
+  template:
+    metadata:
+      labels:
+        app: django-messaging
+        version: v1.0
+        color: blue
+    spec:
+      containers:
+      - name: django-app
+        image: django-messaging:v1.0
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DEBUG
+          value: "True"
+        - name: MYSQL_DB
+          value: "messaging_db"
+        - name: MYSQL_USER
+          value: "messaging_user"
+        - name: MYSQL_PASSWORD
+          value: "messaging_password"
+        - name: MYSQL_HOST
+          value: "mysql-service"
+        - name: MYSQL_PORT
+          value: "3306"
+        - name: DJANGO_SETTINGS_MODULE
+          value: "messaging_app.settings"
+        - name: APP_VERSION
+          value: "v1.0-blue"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+---
+# Green Deployment (New Version v1.1)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: django-messaging-green
+  labels:
+    app: django-messaging
+    version: v1.1
+    color: green
+spec:
+  replicas: 0  # Start with 0 replicas
+  selector:
+    matchLabels:
+      app: django-messaging
+      color: green
+  template:
+    metadata:
+      labels:
+        app: django-messaging
+        version: v1.1
+        color: green
+    spec:
+      containers:
+      - name: django-app
+        image: django-messaging:v1.1
+        imagePullPolicy: Never
+        ports:
+        - containerPort: 8000
+          name: http
+        env:
+        - name: DEBUG
+          value: "True"
+        - name: MYSQL_DB
+          value: "messaging_db"
+        - name: MYSQL_USER
+          value: "messaging_user"
+        - name: MYSQL_PASSWORD
+          value: "messaging_password"
+        - name: MYSQL_HOST
+          value: "mysql-service"
+        - name: MYSQL_PORT
+          value: "3306"
+        - name: DJANGO_SETTINGS_MODULE
+          value: "messaging_app.settings"
+        - name: APP_VERSION
+          value: "v1.1-green"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health/
+            port: 8000
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+---
+# Blue Service (Current Active)
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-blue-service
+  labels:
+    app: django-messaging
+    color: blue
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: django-messaging
+    color: blue
+---
+# Green Service (New Version)
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-green-service
+  labels:
+    app: django-messaging
+    color: green
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: django-messaging
+    color: green
+---
+# Main Service (Routes to blue by default)
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service
+  labels:
+    app: django-messaging
+spec:
+  type: ClusterIP
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: django-messaging
+    color: blue  # Default to blue
+---
+# Ingress for Blue-Green routing
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: django-messaging-blue-green-ingress
+  labels:
+    app: django-messaging
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "X-Frame-Options: DENY";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "X-XSS-Protection: 1; mode=block";
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: messaging.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-service
+            port:
+              number: 80
+      - path: /api/
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-service
+            port:
+              number: 80
+      - path: /admin/
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-service
+            port:
+              number: 80
+      - path: /health/
+        pathType: Exact
+        backend:
+          service:
+            name: django-messaging-service
+            port:
+              number: 80
+      - path: /blue/
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-blue-service
+            port:
+              number: 80
+      - path: /green/
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-green-service
+            port:
+              number: 80

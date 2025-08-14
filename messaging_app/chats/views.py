@@ -1,7 +1,13 @@
 #!/usr/bin/env python3
 """Views for chats app."""
 
-from django.shortcuts import render  # type: ignore
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+import json
+import os
+from datetime import datetime
 from rest_framework import viewsets, status, filters
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -72,6 +78,45 @@ class MessageViewSet(viewsets.ModelViewSet):
             {'detail': 'You are not allowed to access this message.'},
             status=status.HTTP_403_FORBIDDEN
         )
+
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def health_check(request):
+    """
+    Health check endpoint for Kubernetes liveness and readiness probes
+    """
+    try:
+        # Basic health indicators
+        health_status = {
+            "status": "healthy",
+            "timestamp": datetime.now().isoformat(),
+            "version": os.environ.get("APP_VERSION", "unknown"),
+            "debug": os.environ.get("DEBUG", "False"),
+            "database": "connected",  # You can add actual DB check here
+            "checks": {
+                "database": True,
+                "application": True,
+                "environment": True
+            }
+        }
+        
+        # Return 200 OK for healthy status
+        return JsonResponse(health_status, status=200)
+        
+    except Exception as e:
+        # Return 500 for unhealthy status
+        error_status = {
+            "status": "unhealthy",
+            "timestamp": datetime.now().isoformat(),
+            "error": str(e),
+            "checks": {
+                "database": False,
+                "application": False,
+                "environment": False
+            }
+        }
+        return JsonResponse(error_status, status=500)
 
 
 

@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework_nested.routers import NestedDefaultRouter
-from .views import ConversationViewSet, MessageViewSet
+from .views import ConversationViewSet, MessageViewSet, health_check
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested.routers import NestedDefaultRouter
 from .views import ChatViewSet, MessageViewSet
@@ -16,6 +16,7 @@ nested_router.register(r'messages', MessageViewSet, basename='chat-messages')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('health/', health_check, name='health_check'),
 ]
 
 
