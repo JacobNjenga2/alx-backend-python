@@ -1,0 +1,48 @@
+# Commands for Task 3: Set Up Kubernetes Ingress for External Access
+
+# Step 1: Install Nginx Ingress Controller in Minikube
+minikube addons enable ingress
+
+# Alternative method for manual installation:
+# kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/cloud/deploy.yaml
+
+# Step 2: Verify the Ingress Controller is running
+kubectl get pods -n ingress-nginx
+
+# Step 3: Apply the Ingress configuration
+kubectl apply -f ingress.yaml
+
+# Step 4: Verify the Ingress resource was created
+kubectl get ingress
+
+# Step 5: Get detailed information about the Ingress
+kubectl describe ingress django-messaging-ingress
+
+# Step 6: Check if the Ingress Controller service is running
+kubectl get svc -n ingress-nginx
+
+# Step 7: Get the Minikube IP for accessing the application
+minikube ip
+
+# Step 8: Add the domain to your local hosts file (for local testing)
+# Add this line to /etc/hosts (Linux/Mac) or C:\Windows\System32\drivers\etc\hosts (Windows):
+# <minikube-ip> django-messaging.local api.django-messaging.local
+
+# Step 9: Test the Ingress configuration
+# curl http://django-messaging.local/
+# curl http://django-messaging.local/api/
+# curl http://api.django-messaging.local/
+
+# Step 10: Access via NodePort (alternative method)
+# minikube service django-messaging-service-nodeport --url
+
+# Step 11: Monitor the Ingress logs
+kubectl logs -n ingress-nginx -l app.kubernetes.io/name=ingress-nginx
+
+# Step 12: Check Ingress status and endpoints
+kubectl get endpoints django-messaging-service
+
+# Additional useful commands:
+# kubectl get all -l app=django-messaging
+# kubectl port-forward svc/django-messaging-service 8000:8000
+# minikube tunnel (for LoadBalancer services)

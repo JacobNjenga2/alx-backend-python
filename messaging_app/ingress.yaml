@@ -1,0 +1,65 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: django-messaging-ingress
+  labels:
+    app: django-messaging
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "false"
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: django-messaging.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-service
+            port:
+              number: 8000
+      - path: /api/
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-service
+            port:
+              number: 8000
+      - path: /admin/
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-service
+            port:
+              number: 8000
+  - host: api.django-messaging.local
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: django-messaging-service
+            port:
+              number: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service-nodeport
+  labels:
+    app: django-messaging
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30000
+    protocol: TCP
+    name: http
+  selector:
+    app: django-messaging
