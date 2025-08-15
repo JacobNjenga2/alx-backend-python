@@ -1,0 +1,9 @@
+#!/bin/bash
+# Start your toy city
+minikube start
+
+# Check if your city is running properly
+kubectl cluster-info
+
+# See all the little workers (pods) in your city
+kubectl get pods -A
