@@ -1,9 +1,131 @@
 #!/bin/bash
-# Start your toy city
-minikube start
 
-# Check if your city is running properly
-kubectl cluster-info
+# kurbeScript - Install Kubernetes and Set Up a Local Cluster
+# This script starts a Kubernetes cluster and verifies it's running
 
-# See all the little workers (pods) in your city
-kubectl get pods -A
+set -e  # Exit on any error
+
+echo "🚀 Starting Task 0: Install Kubernetes and Set Up a Local Cluster"
+echo "================================================================="
+
+# Function to check if minikube is installed
+check_minikube() {
+    if ! command -v minikube &> /dev/null; then
+        echo "❌ Minikube is not installed"
+        echo "   Please install minikube from: https://minikube.sigs.k8s.io/docs/start/"
+        exit 1
+    fi
+    echo "✅ Minikube is available"
+}
+
+# Function to check if kubectl is installed
+check_kubectl() {
+    if ! command -v kubectl &> /dev/null; then
+        echo "❌ kubectl is not installed"
+        echo "   Please install kubectl from: https://kubernetes.io/docs/tasks/tools/"
+        exit 1
+    fi
+    echo "✅ kubectl is available"
+}
+
+# Function to start minikube cluster
+start_cluster() {
+    echo "🏗️ Starting Kubernetes cluster with minikube..."
+    
+    # Start minikube with appropriate settings
+    minikube start --driver=docker --cpus=2 --memory=4096 --disk-size=20g
+    
+    echo "✅ Minikube cluster started successfully"
+}
+
+# Function to verify cluster is running
+verify_cluster() {
+    echo "🔍 Verifying that the cluster is running..."
+    
+    # Check cluster info
+    echo "📊 Cluster information:"
+    kubectl cluster-info
+    
+    echo ""
+    echo "🔧 Cluster status:"
+    kubectl get nodes -o wide
+    
+    echo ""
+    echo "🏥 Checking cluster health:"
+    kubectl get componentstatuses 2>/dev/null || echo "   Component status not available (normal for newer Kubernetes versions)"
+}
+
+# Function to retrieve available pods
+get_pods() {
+    echo "📦 Retrieving available pods across all namespaces..."
+    kubectl get pods -A
+    
+    echo ""
+    echo "🔍 Pod details:"
+    kubectl get pods -A -o wide
+}
+
+# Function to setup cluster addons
+setup_addons() {
+    echo "🔧 Setting up useful cluster addons..."
+    
+    # Enable metrics server for resource monitoring
+    echo "   Enabling metrics-server..."
+    minikube addons enable metrics-server
+    
+    # Enable dashboard (optional)
+    echo "   Enabling dashboard..."
+    minikube addons enable dashboard
+    
+    echo "✅ Addons enabled successfully"
+}
+
+# Function to show cluster summary
+show_summary() {
+    echo ""
+    echo "🎉 Task 0 Summary:"
+    echo "=================="
+    echo "✅ Minikube installation verified"
+    echo "✅ kubectl installation verified" 
+    echo "✅ Kubernetes cluster started"
+    echo "✅ Cluster connectivity verified"
+    echo "✅ Available pods retrieved"
+    echo "✅ Essential addons enabled"
+    echo ""
+    echo "📋 Useful commands:"
+    echo "   kubectl get nodes"
+    echo "   kubectl get pods -A"
+    echo "   kubectl cluster-info"
+    echo "   minikube status"
+    echo "   minikube dashboard"
+    echo ""
+    echo "🚀 Kubernetes cluster is ready for deployment!"
+}
+
+# Main execution
+main() {
+    echo "Starting cluster setup..."
+    echo ""
+    
+    # Check prerequisites
+    check_minikube
+    check_kubectl
+    
+    # Start the cluster
+    start_cluster
+    
+    # Verify cluster is working
+    verify_cluster
+    
+    # Get available pods
+    get_pods
+    
+    # Setup useful addons
+    setup_addons
+    
+    # Show summary
+    show_summary
+}
+
+# Run the main function
+main "$@"

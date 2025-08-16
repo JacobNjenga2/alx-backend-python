@@ -194,7 +194,7 @@ verify_pod_versions() {
     echo ""
     echo "✅ Verifying image consistency..."
     local expected_image="django-messaging:v2.0"
-    local pods_with_old_image=$(kubectl get pods -l app=django-messaging,version=blue -o jsonpath='{range .items[*]}{.spec.containers[0].image}{"\n"}{end}' | grep -v "$expected_image" | wc -l)
+    local pods_with_old_image=$(kubectl get pods -l app=django-messaging,version=blue -o jsonpath='{range .items[*]}{.spec.containers[0].image}{"\n"}{end}' | grep -v "$expected_image" | wc -l || echo "0")
     
     if [ "$pods_with_old_image" -eq 0 ]; then
         echo "✅ All pods are running the latest image: $expected_image"

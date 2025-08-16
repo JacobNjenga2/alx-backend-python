@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
       - name: django-app
-        image: django-messaging:latest
+        image: django-messaging:v2.0
         imagePullPolicy: Never  # Use local image for Minikube
         ports:
         - containerPort: 8000
