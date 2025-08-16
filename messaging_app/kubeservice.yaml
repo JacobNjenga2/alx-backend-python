@@ -1,0 +1,91 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service-blue
+  labels:
+    app: django-messaging
+    service-type: blue
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: django-messaging
+    version: blue
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service-green
+  labels:
+    app: django-messaging
+    service-type: green
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: django-messaging
+    version: green
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service-active
+  labels:
+    app: django-messaging
+    service-type: active
+  annotations:
+    blue-green.deployment/current-version: "blue"
+    blue-green.deployment/strategy: "blue-green"
+spec:
+  type: ClusterIP
+  ports:
+  - port: 8000
+    targetPort: 8000
+    protocol: TCP
+    name: http
+  selector:
+    app: django-messaging
+    version: blue  # Initially points to blue
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-messaging-service-preview
+  labels:
+    app: django-messaging
+    service-type: preview
+  annotations:
+    blue-green.deployment/purpose: "preview-new-version"
+spec:
+  type: NodePort
+  ports:
+  - port: 8000
+    targetPort: 8000
+    nodePort: 30001
+    protocol: TCP
+    name: http
+  selector:
+    app: django-messaging
+    version: green  # For testing green deployment
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: blue-green-config
+  labels:
+    app: django-messaging
+data:
+  current_version: "blue"
+  target_version: "green"
+  rollback_version: "blue"
+  switch_strategy: "immediate"  # or "gradual"
+  health_check_url: "/health/"
+  switch_delay: "30"  # seconds to wait before switching
