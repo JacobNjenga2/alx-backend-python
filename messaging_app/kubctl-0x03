@@ -1,0 +1,334 @@
+#!/bin/bash
+
+# kubctl-0x03 - Rolling Updates Script
+# This script applies rolling updates to the Django messaging app without downtime
+
+set -e  # Exit on any error
+
+echo "🔄 Starting Task 5: Rolling Updates"
+echo "==================================="
+
+# Function to check if kubectl is available
+check_kubectl() {
+    if ! command -v kubectl &> /dev/null; then
+        echo "❌ kubectl is not installed or not in PATH"
+        echo "   Please ensure kubectl is properly configured"
+        exit 1
+    fi
+    echo "✅ kubectl is available"
+}
+
+# Function to check cluster connectivity
+check_cluster() {
+    echo "🔍 Checking cluster connectivity..."
+    if ! kubectl cluster-info &> /dev/null; then
+        echo "❌ Cannot connect to Kubernetes cluster"
+        echo "   Please ensure your cluster is running and accessible"
+        exit 1
+    fi
+    echo "✅ Cluster is accessible"
+}
+
+# Function to build new Docker image version
+build_new_image() {
+    echo "🏗️ Building new Docker image version 2.0..."
+    
+    # Build the new version of the image
+    docker build -t django-messaging:v2.0 .
+    
+    echo "✅ Docker image django-messaging:v2.0 built successfully"
+    
+    # Show image details
+    echo "📊 New image details:"
+    docker images | grep django-messaging
+}
+
+# Function to apply rolling update
+apply_rolling_update() {
+    echo "🚀 Applying rolling update to blue deployment..."
+    
+    # Apply the updated deployment file
+    kubectl apply -f blue_deployment.yaml
+    
+    echo "✅ Updated deployment applied"
+    
+    # Show deployment details
+    echo "📋 Deployment details:"
+    kubectl get deployment django-messaging-app-blue -o wide
+}
+
+# Function to monitor rollout status
+monitor_rollout() {
+    echo "⏳ Monitoring rolling update progress..."
+    
+    # Monitor the rollout status
+    kubectl rollout status deployment/django-messaging-app-blue --timeout=600s
+    
+    echo "✅ Rolling update completed successfully"
+    
+    # Show updated pods
+    echo "📦 Updated pods:"
+    kubectl get pods -l app=django-messaging,version=blue -o wide
+}
+
+# Function to verify rollout history
+verify_rollout_history() {
+    echo "📚 Rolling update history:"
+    kubectl rollout history deployment/django-messaging-app-blue
+    
+    echo ""
+    echo "🔍 Current deployment details:"
+    kubectl describe deployment django-messaging-app-blue | grep -A 5 "Image:"
+}
+
+# Function to test application during update (continuous health check)
+test_app_availability() {
+    echo "🧪 Testing application availability during update..."
+    
+    # Get service details
+    service_name="django-messaging-service"
+    
+    # Check if service exists
+    if ! kubectl get svc "$service_name" &> /dev/null; then
+        echo "⚠️  Service $service_name not found, creating basic service for testing..."
+        
+        # Create a basic service if it doesn't exist
+        kubectl expose deployment django-messaging-app-blue --port=8000 --target-port=8000 --name="$service_name" --type=ClusterIP || true
+    fi
+    
+    # Port forward for testing
+    echo "🌐 Setting up port forwarding for testing..."
+    kubectl port-forward svc/"$service_name" 8080:8000 &
+    PORT_FORWARD_PID=$!
+    
+    # Wait for port forward to be ready
+    sleep 5
+    
+    echo "🔄 Starting continuous availability test..."
+    echo "   Testing endpoint: http://localhost:8080/"
+    
+    # Function to test endpoint
+    test_endpoint() {
+        local url="http://localhost:8080/"
+        local timeout=5
+        
+        # Use curl with timeout
+        if command -v curl &> /dev/null; then
+            if curl -s --max-time $timeout --connect-timeout $timeout "$url" > /dev/null 2>&1; then
+                return 0
+            else
+                return 1
+            fi
+        else
+            # Fallback to wget if curl is not available
+            if command -v wget &> /dev/null; then
+                if wget -q --timeout=$timeout --tries=1 "$url" -O /dev/null > /dev/null 2>&1; then
+                    return 0
+                else
+                    return 1
+                fi
+            else
+                echo "⚠️  Neither curl nor wget available for testing"
+                return 1
+            fi
+        fi
+    }
+    
+    # Continuous testing during rollout
+    local test_duration=60  # Test for 60 seconds
+    local test_interval=2   # Test every 2 seconds
+    local start_time=$(date +%s)
+    local success_count=0
+    local failure_count=0
+    local total_tests=0
+    
+    echo "⏰ Running availability tests for $test_duration seconds..."
+    
+    while [ $(($(date +%s) - start_time)) -lt $test_duration ]; do
+        total_tests=$((total_tests + 1))
+        
+        if test_endpoint; then
+            success_count=$((success_count + 1))
+            echo "✅ Test $total_tests: Service available"
+        else
+            failure_count=$((failure_count + 1))
+            echo "❌ Test $total_tests: Service unavailable"
+        fi
+        
+        sleep $test_interval
+    done
+    
+    # Clean up port forward
+    kill $PORT_FORWARD_PID 2>/dev/null || true
+    
+    # Show test results
+    echo ""
+    echo "📊 Availability Test Results:"
+    echo "   Total tests: $total_tests"
+    echo "   Successful: $success_count"
+    echo "   Failed: $failure_count"
+    echo "   Success rate: $(( (success_count * 100) / total_tests ))%"
+    
+    if [ $failure_count -eq 0 ]; then
+        echo "🎉 Zero downtime achieved!"
+    elif [ $failure_count -lt 3 ]; then
+        echo "✅ Minimal downtime (acceptable for rolling update)"
+    else
+        echo "⚠️  Significant downtime detected during update"
+    fi
+}
+
+# Function to verify pods are running latest version
+verify_pod_versions() {
+    echo "🔍 Verifying all pods are running the latest version..."
+    
+    # Get all pods for the deployment
+    echo "📦 Current pods:"
+    kubectl get pods -l app=django-messaging,version=blue -o wide
+    
+    echo ""
+    echo "🏷️ Pod image versions:"
+    kubectl get pods -l app=django-messaging,version=blue -o jsonpath='{range .items[*]}{.metadata.name}{"\t"}{.spec.containers[0].image}{"\n"}{end}' | column -t
+    
+    # Check if all pods are using the new image
+    echo ""
+    echo "✅ Verifying image consistency..."
+    local expected_image="django-messaging:v2.0"
+    local pods_with_old_image=$(kubectl get pods -l app=django-messaging,version=blue -o jsonpath='{range .items[*]}{.spec.containers[0].image}{"\n"}{end}' | grep -v "$expected_image" | wc -l)
+    
+    if [ "$pods_with_old_image" -eq 0 ]; then
+        echo "✅ All pods are running the latest image: $expected_image"
+    else
+        echo "⚠️  Some pods are still running older images"
+        echo "   Expected: $expected_image"
+        echo "   Pods not updated: $pods_with_old_image"
+    fi
+}
+
+# Function to show rolling update summary
+show_summary() {
+    echo ""
+    echo "🎉 Rolling Update Summary"
+    echo "========================"
+    echo "✅ Docker image updated to v2.0"
+    echo "✅ Rolling update applied successfully"
+    echo "✅ Deployment rollout completed"
+    echo "✅ Application availability tested"
+    echo "✅ Pod versions verified"
+    echo ""
+    echo "📋 Useful commands:"
+    echo "   kubectl get pods -l app=django-messaging,version=blue"
+    echo "   kubectl rollout history deployment/django-messaging-app-blue"
+    echo "   kubectl describe deployment django-messaging-app-blue"
+    echo "   kubectl logs -l app=django-messaging,version=blue"
+    echo ""
+    echo "🔄 Rollback commands (if needed):"
+    echo "   kubectl rollout undo deployment/django-messaging-app-blue"
+    echo "   kubectl rollout undo deployment/django-messaging-app-blue --to-revision=1"
+}
+
+# Function to run complete rolling update process
+run_rolling_update() {
+    echo "🚀 Running complete rolling update process..."
+    echo ""
+    
+    # Step 1: Build new image
+    build_new_image
+    echo ""
+    
+    # Step 2: Apply rolling update
+    apply_rolling_update
+    echo ""
+    
+    # Step 3: Start availability testing in background and monitor rollout
+    echo "🔄 Starting parallel monitoring and testing..."
+    
+    # Run availability test in background
+    test_app_availability &
+    TEST_PID=$!
+    
+    # Monitor rollout in foreground
+    monitor_rollout
+    
+    # Wait for availability test to complete
+    wait $TEST_PID 2>/dev/null || true
+    echo ""
+    
+    # Step 4: Verify rollout history
+    verify_rollout_history
+    echo ""
+    
+    # Step 5: Verify pod versions
+    verify_pod_versions
+    echo ""
+    
+    # Step 6: Show summary
+    show_summary
+}
+
+# Function to show help
+show_help() {
+    echo "Usage: $0 [COMMAND]"
+    echo ""
+    echo "Commands:"
+    echo "  build           Build new Docker image only"
+    echo "  apply           Apply rolling update only"
+    echo "  monitor         Monitor rollout status only"
+    echo "  test            Test application availability only"
+    echo "  verify          Verify pod versions only"
+    echo "  history         Show rollout history"
+    echo "  full            Run complete rolling update process (default)"
+    echo "  help            Show this help message"
+    echo ""
+    echo "Examples:"
+    echo "  $0              # Run complete rolling update"
+    echo "  $0 build        # Build new image only"
+    echo "  $0 monitor      # Monitor current rollout"
+    echo "  $0 history      # Show rollout history"
+}
+
+# Main execution
+main() {
+    local command=${1:-full}
+    
+    echo "🔍 Checking prerequisites..."
+    check_kubectl
+    check_cluster
+    echo ""
+    
+    case $command in
+        "build")
+            build_new_image
+            ;;
+        "apply")
+            apply_rolling_update
+            ;;
+        "monitor")
+            monitor_rollout
+            ;;
+        "test")
+            test_app_availability
+            ;;
+        "verify")
+            verify_pod_versions
+            ;;
+        "history")
+            verify_rollout_history
+            ;;
+        "full")
+            run_rolling_update
+            ;;
+        "help"|"-h"|"--help")
+            show_help
+            ;;
+        *)
+            echo "❌ Unknown command: $command"
+            echo ""
+            show_help
+            exit 1
+            ;;
+    esac
+}
+
+# Run the main function with all arguments
+main "$@"
