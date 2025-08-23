@@ -2,17 +2,10 @@ pipeline {
     agent any
     
     stages {
-        stage('Install virtualenv') {
-            steps {
-                sh 'pip3 install virtualenv'
-            }
-        }
-        
-        stage('Setup Environment') {
+        stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh 'virtualenv venv'
-                    sh 'source venv/bin/activate && pip install -r requirements.txt'
+                    sh 'pip3 install -r requirements.txt --break-system-packages'
                 }
             }
         }
@@ -20,7 +13,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('messaging_app') {
-                    sh 'source venv/bin/activate && python -m pytest --junitxml=test-results.xml'
+                    sh 'python3 -m pytest --junitxml=test-results.xml'
                 }
             }
             post {
@@ -28,12 +21,6 @@ pipeline {
                     junit 'messaging_app/test-results.xml'
                 }
             }
-        }
-    }
-    
-    post {
-        always {
-            echo 'Pipeline completed'
         }
     }
 }
