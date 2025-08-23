@@ -10,13 +10,16 @@ pipeline {
                         sh 'python --version'
                         echo "Python is already installed"
                     } catch (Exception e) {
-                        echo "Python not found. Installing Python..."
+                        echo "Python not found. Installing Python as root..."
+                        
+                        // Switch to root user to install packages
                         sh '''
-                            sudo apt-get update
-                            sudo apt-get install -y python3 python3-pip python3-venv
-                            sudo ln -s /usr/bin/python3 /usr/bin/python
-                            sudo ln -s /usr/bin/pip3 /usr/bin/pip
+                            apt-get update
+                            apt-get install -y python3 python3-pip python3-venv
+                            ln -s /usr/bin/python3 /usr/bin/python
+                            ln -s /usr/bin/pip3 /usr/bin/pip
                         '''
+                        
                         sh 'python --version'
                         echo "Python installed successfully"
                     }
@@ -26,9 +29,8 @@ pipeline {
         
         stage('Checkout') {
             steps {
-                git branch: 'main', 
-                url: 'https://github.com/JacobNjenga2/alx-backend-python.git',
-                credentialsId: 'f4abe732-4a19-4e1d-8d01-61bb2ee2bb15'
+                // This stage is handled automatically by Jenkins SCM
+                echo "Code already checked out by SCM"
             }
         }
         
@@ -36,16 +38,9 @@ pipeline {
             steps {
                 dir('messaging_app') {
                     script {
-                        // Create virtual environment with error handling
-                        try {
-                            sh 'python -m venv venv'
-                            echo "Virtual environment created successfully"
-                        } catch (Exception e) {
-                            echo "Virtual environment creation failed: ${e.getMessage()}"
-                            echo "Attempting to install virtualenv first..."
-                            sh 'pip install virtualenv'
-                            sh 'python -m virtualenv venv'
-                        }
+                        // Create virtual environment
+                        sh 'python -m venv venv'
+                        echo "Virtual environment created successfully"
                         
                         // Verify the virtual environment
                         sh 'source venv/bin/activate && python --version'
@@ -58,11 +53,9 @@ pipeline {
             steps {
                 dir('messaging_app') {
                     script {
-                        // Install dependencies with retry logic
-                        retry(3) {
-                            sh 'source venv/bin/activate && pip install --upgrade pip'
-                            sh 'source venv/bin/activate && pip install -r requirements.txt'
-                        }
+                        // Install dependencies
+                        sh 'source venv/bin/activate && pip install --upgrade pip'
+                        sh 'source venv/bin/activate && pip install -r requirements.txt'
                     }
                 }
             }
@@ -72,7 +65,7 @@ pipeline {
             steps {
                 dir('messaging_app') {
                     script {
-                        // Run tests with coverage and detailed reporting
+                        // Run tests
                         sh 'source venv/bin/activate && python -m pytest --junitxml=test-results.xml -v'
                     }
                 }
@@ -80,33 +73,6 @@ pipeline {
             post {
                 always {
                     junit 'messaging_app/test-results.xml'
-                    // Optional: Archive test results
-                    archiveArtifacts artifacts: 'messaging_app/test-results.xml', fingerprint: true
-                }
-                success {
-                    echo "All tests passed! ✅"
-                }
-                failure {
-                    echo "Some tests failed! ❌"
-                    // Optional: Send notification on failure
-                }
-            }
-        }
-        
-        stage('Code Quality Check') {
-            steps {
-                dir('messaging_app') {
-                    script {
-                        // Optional: Add linting and code quality checks
-                        try {
-                            sh 'source venv/bin/activate && pip install flake8'
-                            sh 'source venv/bin/activate && flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics'
-                            echo "Code quality check passed"
-                        } catch (Exception e) {
-                            echo "Code quality issues found: ${e.getMessage()}"
-                            // Continue pipeline even if linting fails (optional)
-                        }
-                    }
                 }
             }
         }
@@ -115,27 +81,16 @@ pipeline {
     post {
         always {
             echo "Pipeline completed - cleaning up resources"
-            // Clean up virtual environment to save space
-            dir('messaging_app') {
-                sh 'rm -rf venv || true'
-            }
         }
         success {
             echo "Pipeline executed successfully! 🎉"
-            // Optional: Send success notification
         }
         failure {
             echo "Pipeline failed! Please check the logs. 🔍"
-            // Optional: Send failure notification
-        }
-        unstable {
-            echo "Pipeline is unstable (tests failed but pipeline continued)"
         }
     }
     
     options {
         timeout(time: 30, unit: 'MINUTES')
-        retry(1) // Retry the entire pipeline once if failed
-        buildDiscarder(logRotator(numToKeepStr: '10'))
     }
 }
