@@ -33,8 +33,8 @@ pipeline {
         stage('Setup Python Environment') {
             steps {
                 dir('messaging_app') {
-                    sh "${env.PYTHON_CMD} -m venv venv"
-                    sh "source venv/bin/activate && ${env.PYTHON_CMD} --version"
+                    sh 'python3 -m venv venv'
+                    sh 'source venv/bin/activate && python3 --version'
                 }
             }
         }
@@ -42,7 +42,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh "source venv/bin/activate && ${env.PIP_CMD} install -r requirements.txt"
+                    sh 'source venv/bin/activate && pip install -r requirements.txt'
                 }
             }
         }
@@ -50,7 +50,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('messaging_app') {
-                    sh "source venv/bin/activate && ${env.PYTHON_CMD} -m pytest --junitxml=test-results.xml"
+                    sh 'source venv/bin/activate && python3 -m pytest --junitxml=test-results.xml'
                 }
             }
             post {
@@ -63,7 +63,13 @@ pipeline {
     
     post {
         always {
-            echo 'Pipeline completed'
+            echo 'Pipeline completed successfully! 🎉'
+        }
+        success {
+            echo 'All tests passed! ✅'
+        }
+        failure {
+            echo 'Pipeline failed! Please check the logs. ❌'
         }
     }
 }
