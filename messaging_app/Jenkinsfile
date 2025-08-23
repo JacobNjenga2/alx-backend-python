@@ -1,8 +1,27 @@
 pipeline {
-    agent any
+    agent {
+        docker {
+            image 'python:3.9-slim'  // Use official Python image
+            args '--user root'  // Run as root to avoid permission issues
+        }
+    }
     
     stages {
-        stage('Setup Python Environment') {
+        stage('Checkout') {
+            steps {
+                checkout([
+                    $class: 'GitSCM',
+                    branches: [[name: 'main']],
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/JacobNjenga2/alx-backend-python.git',
+                        credentialsId: 'f4abe732-4a19-4e1d-8d01-61bb2ee2bb15'
+                    ]]
+                ])
+            }
+        }
+        
+        stage('Setup Environment') {
             steps {
                 dir('messaging_app') {
                     sh 'python -m venv venv'
