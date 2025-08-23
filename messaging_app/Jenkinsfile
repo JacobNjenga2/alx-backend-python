@@ -2,24 +2,7 @@ pipeline {
     agent any
     
     stages {
-        stage('Install System Dependencies') {
-            steps {
-                script {
-                    // Install MySQL client development libraries and build tools
-                    sh '''
-                        apt-get update
-                        apt-get install -y \
-                            pkg-config \
-                            default-libmysqlclient-dev \
-                            libmysqlclient-dev \
-                            build-essential \
-                            python3-dev
-                    '''
-                }
-            }
-        }
-        
-        stage('Install Python Dependencies') {
+        stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
                     sh 'pip3 install -r requirements.txt --break-system-packages'
@@ -38,12 +21,6 @@ pipeline {
                     junit 'messaging_app/test-results.xml'
                 }
             }
-        }
-    }
-    
-    post {
-        always {
-            echo 'Pipeline completed'
         }
     }
 }
