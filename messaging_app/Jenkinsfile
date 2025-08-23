@@ -1,31 +1,40 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.9-slim'  // Use official Python image
-            args '--user root'  // Run as root to avoid permission issues
-        }
-    }
+    agent any
     
     stages {
-        stage('Checkout') {
+        stage('Check Python Availability') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: 'main']],
-                    extensions: [],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/JacobNjenga2/alx-backend-python.git',
-                        credentialsId: 'f4abe732-4a19-4e1d-8d01-61bb2ee2bb15'
-                    ]]
-                ])
+                script {
+                    // Try to find available Python interpreter
+                    def pythonCommands = ['python3', 'python', '/usr/bin/python3', '/usr/bin/python']
+                    env.PYTHON_CMD = null
+                    
+                    for (cmd in pythonCommands) {
+                        try {
+                            sh "${cmd} --version"
+                            env.PYTHON_CMD = cmd
+                            echo "Using Python: ${cmd}"
+                            break
+                        } catch (Exception e) {
+                            echo "${cmd} not available"
+                        }
+                    }
+                    
+                    if (env.PYTHON_CMD == null) {
+                        error "No Python interpreter found. Please install Python in the Jenkins environment."
+                    }
+                    
+                    // Set pip command based on python command
+                    env.PIP_CMD = env.PYTHON_CMD.replace('python', 'pip')
+                }
             }
         }
         
-        stage('Setup Environment') {
+        stage('Setup Python Environment') {
             steps {
                 dir('messaging_app') {
-                    sh 'python -m venv venv'
-                    sh 'source venv/bin/activate && python --version'
+                    sh "${env.PYTHON_CMD} -m venv venv"
+                    sh "source venv/bin/activate && ${env.PYTHON_CMD} --version"
                 }
             }
         }
@@ -33,7 +42,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh 'source venv/bin/activate && pip install -r requirements.txt'
+                    sh "source venv/bin/activate && ${env.PIP_CMD} install -r requirements.txt"
                 }
             }
         }
@@ -41,7 +50,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('messaging_app') {
-                    sh 'source venv/bin/activate && python -m pytest --junitxml=test-results.xml'
+                    sh "source venv/bin/activate && ${env.PYTHON_CMD} -m pytest --junitxml=test-results.xml"
                 }
             }
             post {
