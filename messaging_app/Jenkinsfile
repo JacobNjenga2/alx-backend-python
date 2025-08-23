@@ -2,49 +2,11 @@ pipeline {
     agent any
     
     stages {
-        stage('Check Python Installation') {
-            steps {
-                script {
-                    // Check if Python is available, install if not
-                    try {
-                        sh 'python --version'
-                        echo "Python is already installed"
-                    } catch (Exception e) {
-                        echo "Python not found. Installing Python as root..."
-                        
-                        // Switch to root user to install packages
-                        sh '''
-                            apt-get update
-                            apt-get install -y python3 python3-pip python3-venv
-                            ln -s /usr/bin/python3 /usr/bin/python
-                            ln -s /usr/bin/pip3 /usr/bin/pip
-                        '''
-                        
-                        sh 'python --version'
-                        echo "Python installed successfully"
-                    }
-                }
-            }
-        }
-        
-        stage('Checkout') {
-            steps {
-                // This stage is handled automatically by Jenkins SCM
-                echo "Code already checked out by SCM"
-            }
-        }
-        
         stage('Setup Python Environment') {
             steps {
                 dir('messaging_app') {
-                    script {
-                        // Create virtual environment
-                        sh 'python -m venv venv'
-                        echo "Virtual environment created successfully"
-                        
-                        // Verify the virtual environment
-                        sh 'source venv/bin/activate && python --version'
-                    }
+                    sh 'python -m venv venv'
+                    sh 'source venv/bin/activate && python --version'
                 }
             }
         }
@@ -52,11 +14,7 @@ pipeline {
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    script {
-                        // Install dependencies
-                        sh 'source venv/bin/activate && pip install --upgrade pip'
-                        sh 'source venv/bin/activate && pip install -r requirements.txt'
-                    }
+                    sh 'source venv/bin/activate && pip install -r requirements.txt'
                 }
             }
         }
@@ -64,10 +22,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('messaging_app') {
-                    script {
-                        // Run tests
-                        sh 'source venv/bin/activate && python -m pytest --junitxml=test-results.xml -v'
-                    }
+                    sh 'source venv/bin/activate && python -m pytest --junitxml=test-results.xml'
                 }
             }
             post {
@@ -80,17 +35,7 @@ pipeline {
     
     post {
         always {
-            echo "Pipeline completed - cleaning up resources"
+            echo 'Pipeline completed'
         }
-        success {
-            echo "Pipeline executed successfully! 🎉"
-        }
-        failure {
-            echo "Pipeline failed! Please check the logs. 🔍"
-        }
-    }
-    
-    options {
-        timeout(time: 30, unit: 'MINUTES')
     }
 }
