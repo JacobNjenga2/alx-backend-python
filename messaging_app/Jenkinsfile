@@ -2,47 +2,10 @@ pipeline {
     agent any
     
     stages {
-        stage('Check Python Availability') {
-            steps {
-                script {
-                    // Try to find available Python interpreter
-                    def pythonCommands = ['python3', 'python', '/usr/bin/python3', '/usr/bin/python']
-                    env.PYTHON_CMD = null
-                    
-                    for (cmd in pythonCommands) {
-                        try {
-                            sh "${cmd} --version"
-                            env.PYTHON_CMD = cmd
-                            echo "Using Python: ${cmd}"
-                            break
-                        } catch (Exception e) {
-                            echo "${cmd} not available"
-                        }
-                    }
-                    
-                    if (env.PYTHON_CMD == null) {
-                        error "No Python interpreter found. Please install Python in the Jenkins environment."
-                    }
-                    
-                    // Set pip command based on python command
-                    env.PIP_CMD = env.PYTHON_CMD.replace('python', 'pip')
-                }
-            }
-        }
-        
-        stage('Setup Python Environment') {
-            steps {
-                dir('messaging_app') {
-                    sh 'python3 -m venv venv'
-                    sh 'source venv/bin/activate && python3 --version'
-                }
-            }
-        }
-        
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh 'source venv/bin/activate && pip install -r requirements.txt'
+                    sh 'pip3 install -r requirements.txt'
                 }
             }
         }
@@ -50,7 +13,7 @@ pipeline {
         stage('Run Tests') {
             steps {
                 dir('messaging_app') {
-                    sh 'source venv/bin/activate && python3 -m pytest --junitxml=test-results.xml'
+                    sh 'python3 -m pytest --junitxml=test-results.xml'
                 }
             }
             post {
@@ -63,13 +26,7 @@ pipeline {
     
     post {
         always {
-            echo 'Pipeline completed successfully! 🎉'
-        }
-        success {
-            echo 'All tests passed! ✅'
-        }
-        failure {
-            echo 'Pipeline failed! Please check the logs. ❌'
+            echo 'Pipeline completed'
         }
     }
 }
