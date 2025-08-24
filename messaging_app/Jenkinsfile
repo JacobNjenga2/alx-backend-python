@@ -1,11 +1,218 @@
 pipeline {
     agent any
     
+    environment {
+        // Python version and virtual environment
+        PYTHON_VERSION = '3.11'
+        VENV_NAME = 'messaging_app_venv'
+        
+        // Django settings
+        DJANGO_SETTINGS_MODULE = 'messaging_app.settings'
+        SECRET_KEY = 'jenkins-test-secret-key-not-for-production'
+        DEBUG = 'False'
+        ALLOWED_HOSTS = '*'
+        
+        // Database settings for testing
+        MYSQL_HOST = 'localhost'
+        MYSQL_PORT = '3306'
+        MYSQL_DB = 'messaging_db_test'
+        MYSQL_USER = 'jenkins_user'
+        MYSQL_PASSWORD = 'jenkins_password'
+        
+        // Reports directory
+        REPORTS_DIR = 'reports'
+        COVERAGE_DIR = 'htmlcov'
+    }
+    
+    options {
+        // Keep builds for 30 days or last 10 builds
+        buildDiscarder(logRotator(daysToKeepStr: '30', numToKeepStr: '10'))
+        
+        // Add timestamps to console output
+        timestamps()
+        
+        // Timeout after 30 minutes
+        timeout(time: 30, unit: 'MINUTES')
+        
+        // Skip default checkout
+        skipDefaultCheckout(true)
+    }
+    
+    triggers {
+        // Poll SCM every 5 minutes for changes
+        pollSCM('H/5 * * * *')
+        
+        // Build periodically (daily at 2 AM)
+        cron('H 2 * * *')
+    }
+    
     stages {
+        stage('Checkout') {
+            steps {
+                script {
+                    echo "🔄 Checking out code from GitHub..."
+                    
+                    // Clean workspace
+                    cleanWs()
+                    
+                    // Checkout code from GitHub using credentials
+                    checkout([
+                        $class: 'GitSCM',
+                        branches: [[name: '*/main']],
+                        doGenerateSubmoduleConfigurations: false,
+                        extensions: [
+                            [$class: 'CleanBeforeCheckout'],
+                            [$class: 'CloneOption', depth: 1, noTags: false, reference: '', shallow: true]
+                        ],
+                        submoduleCfg: [],
+                        userRemoteConfigs: [[
+                            credentialsId: 'github-credentials',
+                            url: 'https://github.com/yourusername/alx-backend-python.git'
+                        ]]
+                    ])
+                    
+                    // Change to messaging_app directory
+                    dir('messaging_app') {
+                        echo "✅ Code checkout completed"
+                        sh 'pwd && ls -la'
+                    }
+                }
+            }
+        }
+        
+        stage('Setup Environment') {
+            steps {
+                dir('messaging_app') {
+                    script {
+                        echo "🏗️ Setting up Python environment..."
+                        
+                        // Create virtual environment
+                        sh """
+                            python${PYTHON_VERSION} -m venv ${VENV_NAME}
+                            source ${VENV_NAME}/bin/activate
+                            python --version
+                            pip --version
+                        """
+                        
+                        echo "✅ Python environment setup completed"
+                    }
+                }
+            }
+        }
+        
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh 'pip install -r requirements.txt --break-system-packages'
+                    script {
+                        echo "📦 Installing dependencies..."
+                        
+                        sh """
+                            source ${VENV_NAME}/bin/activate
+                            
+                            # Upgrade pip
+                            pip install --upgrade pip
+                            
+                            # Install system dependencies (if needed)
+                            # sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config gcc
+                            
+                            # Install Python dependencies
+                            pip install -r requirements.txt
+                            
+                            # Install additional testing tools
+                            pip install pytest-html pytest-json-report pytest-xdist
+                            
+                            # Verify installations
+                            pip list
+                        """
+                        
+                        echo "✅ Dependencies installation completed"
+                    }
+                }
+            }
+        }
+        
+        stage('Setup Database') {
+            steps {
+                dir('messaging_app') {
+                    script {
+                        echo "🗄️ Setting up test database..."
+                        
+                        // Setup MySQL test database
+                        sh """
+                            # Create test database (assuming MySQL is available)
+                            mysql -u root -p\${MYSQL_ROOT_PASSWORD} -e "
+                                CREATE DATABASE IF NOT EXISTS ${MYSQL_DB};
+                                CREATE USER IF NOT EXISTS '${MYSQL_USER}'@'localhost' IDENTIFIED BY '${MYSQL_PASSWORD}';
+                                GRANT ALL PRIVILEGES ON ${MYSQL_DB}.* TO '${MYSQL_USER}'@'localhost';
+                                FLUSH PRIVILEGES;
+                            " || echo "Database setup completed or already exists"
+                            
+                            source ${VENV_NAME}/bin/activate
+                            
+                            # Run Django migrations
+                            python manage.py migrate --run-syncdb
+                            
+                            # Create test data (if needed)
+                            # python manage.py loaddata fixtures/test_data.json
+                        """
+                        
+                        echo "✅ Database setup completed"
+                    }
+                }
+            }
+        }
+        
+        stage('Code Quality Checks') {
+            parallel {
+                stage('Linting') {
+                    steps {
+                        dir('messaging_app') {
+                            script {
+                                echo "🔍 Running code quality checks..."
+                                
+                                sh """
+                                    source ${VENV_NAME}/bin/activate
+                                    mkdir -p ${REPORTS_DIR}
+                                    
+                                    # Run flake8 linting
+                                    flake8 . --output-file=${REPORTS_DIR}/flake8-report.txt --tee || true
+                                    
+                                    # Run black formatting check
+                                    black --check --diff . > ${REPORTS_DIR}/black-report.txt 2>&1 || true
+                                    
+                                    # Run isort import sorting check
+                                    isort --check-only --diff . > ${REPORTS_DIR}/isort-report.txt 2>&1 || true
+                                """
+                                
+                                echo "✅ Code quality checks completed"
+                            }
+                        }
+                    }
+                }
+                
+                stage('Security Checks') {
+                    steps {
+                        dir('messaging_app') {
+                            script {
+                                echo "🔒 Running security checks..."
+                                
+                                sh """
+                                    source ${VENV_NAME}/bin/activate
+                                    mkdir -p ${REPORTS_DIR}
+                                    
+                                    # Run safety check for known vulnerabilities
+                                    safety check --json --output ${REPORTS_DIR}/safety-report.json || true
+                                    safety check --output ${REPORTS_DIR}/safety-report.txt || true
+                                    
+                                    # Run bandit security linter
+                                    bandit -r . -f json -o ${REPORTS_DIR}/bandit-report.json || true
+                                    bandit -r . -f txt -o ${REPORTS_DIR}/bandit-report.txt || true
+                                """
+                                
+                                echo "✅ Security checks completed"
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -14,69 +221,146 @@ pipeline {
             steps {
                 dir('messaging_app') {
                     script {
-                        def testFiles = findFiles(glob: '**/test_*.py')
-                        def testDirs = findFiles(glob: '**/tests/**/*.py')
+                        echo "🧪 Running tests with pytest..."
                         
-                        if (testFiles.length > 0 || testDirs.length > 0) {
-                            sh 'python -m pytest --junitxml=test-results.xml'
-                        } else {
-                            echo 'No test files found - creating empty test results'
-                            sh 'echo \"<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?><testsuite name=\\"pytest\\" tests=\\"0\\" failures=\\"0\\"/>\" > test-results.xml'
-                        }
+                        sh """
+                            source ${VENV_NAME}/bin/activate
+                            mkdir -p ${REPORTS_DIR}
+                            
+                            # Run pytest with comprehensive reporting
+                            pytest \\
+                                --verbose \\
+                                --tb=short \\
+                                --junitxml=${REPORTS_DIR}/junit-report.xml \\
+                                --html=${REPORTS_DIR}/pytest-report.html \\
+                                --self-contained-html \\
+                                --json-report --json-report-file=${REPORTS_DIR}/pytest-report.json \\
+                                --cov=. \\
+                                --cov-branch \\
+                                --cov-report=term-missing \\
+                                --cov-report=html:${COVERAGE_DIR} \\
+                                --cov-report=xml:${REPORTS_DIR}/coverage.xml \\
+                                --cov-fail-under=70 \\
+                                --maxfail=10 \\
+                                -n auto \\
+                                chats/ messaging_app/ \\
+                                || exit_code=\$?
+                            
+                            # Generate coverage badge (optional)
+                            coverage-badge -o ${REPORTS_DIR}/coverage-badge.svg || true
+                            
+                            # Show coverage summary
+                            coverage report --show-missing
+                            
+                            # Exit with the pytest exit code
+                            exit \${exit_code:-0}
+                        """
+                        
+                        echo "✅ Tests completed"
                     }
                 }
             }
             post {
                 always {
-                    junit 'messaging_app/test-results.xml'
-                }
-            }
-        }
-        
-        stage('Build Docker Image') {
-            steps {
-                dir('messaging_app') {
-                    script {
-                        if (!fileExists('Dockerfile')) {
-                            writeFile file: 'Dockerfile', text: '''
-FROM python:3.9-slim
-WORKDIR /app
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
-RUN apt-get update && apt-get install -y \
-    gcc \
-    default-libmysqlclient-dev \
-    pkg-config \
-    && rm -rf /var/lib/apt/lists/*
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY . .
-EXPOSE 8000
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
-'''
-                        }
+                    dir('messaging_app') {
+                        // Publish test results
+                        publishTestResults testResultsPattern: "${REPORTS_DIR}/junit-report.xml"
                         
-                        sh "docker build -t ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} ."
-                        sh "docker tag ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} ${env.DOCKER_IMAGE}:latest"
+                        // Publish coverage reports
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: "${COVERAGE_DIR}",
+                            reportFiles: 'index.html',
+                            reportName: 'Coverage Report',
+                            reportTitles: 'Code Coverage'
+                        ])
+                        
+                        // Publish pytest HTML report
+                        publishHTML([
+                            allowMissing: false,
+                            alwaysLinkToLastBuild: true,
+                            keepAll: true,
+                            reportDir: "${REPORTS_DIR}",
+                            reportFiles: 'pytest-report.html',
+                            reportName: 'Pytest Report',
+                            reportTitles: 'Test Results'
+                        ])
                     }
                 }
             }
         }
         
-        stage('Push to Docker Hub') {
+        stage('Django System Checks') {
             steps {
                 dir('messaging_app') {
                     script {
-                        withCredentials([usernamePassword(
-                            credentialsId: 'docker-hub-credentials',
-                            usernameVariable: 'DOCKER_USERNAME',
-                            passwordVariable: 'DOCKER_PASSWORD'
-                        )]) {
-                            sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"
-                        }
+                        echo "⚙️ Running Django system checks..."
                         
-                        sh "docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}"
-                        sh "docker push ${env.DOCKER_IMAGE}:latest"
+                        sh """
+                            source ${VENV_NAME}/bin/activate
+                            
+                            # Run Django system checks
+                            python manage.py check --deploy > ${REPORTS_DIR}/django-check.txt 2>&1 || true
+                            
+                            # Run Django migration checks
+                            python manage.py makemigrations --dry-run --check || true
+                            
+                            # Collect static files (if applicable)
+                            # python manage.py collectstatic --noinput --dry-run
+                        """
+                        
+                        echo "✅ Django system checks completed"
+                    }
+                }
+            }
+        }
+        
+        stage('Build Artifacts') {
+            when {
+                anyOf {
+                    branch 'main'
+                    branch 'develop'
+                    buildingTag()
+                }
+            }
+            steps {
+                dir('messaging_app') {
+                    script {
+                        echo "📦 Building deployment artifacts..."
+                        
+                        sh """
+                            source ${VENV_NAME}/bin/activate
+                            
+                            # Create deployment package
+                            tar -czf ../messaging-app-\${BUILD_NUMBER}.tar.gz \\
+                                --exclude='${VENV_NAME}' \\
+                                --exclude='*.pyc' \\
+                                --exclude='__pycache__' \\
+                                --exclude='.git' \\
+                                --exclude='${REPORTS_DIR}' \\
+                                --exclude='${COVERAGE_DIR}' \\
+                                .
+                            
+                            # Generate requirements freeze
+                            pip freeze > ${REPORTS_DIR}/requirements-freeze.txt
+                            
+                            # Create build info
+                            cat > ${REPORTS_DIR}/build-info.json << EOF
+{
+    "build_number": "\${BUILD_NUMBER}",
+    "build_id": "\${BUILD_ID}",
+    "build_url": "\${BUILD_URL}",
+    "git_commit": "\${GIT_COMMIT}",
+    "git_branch": "\${GIT_BRANCH}",
+    "build_timestamp": "\$(date -Iseconds)",
+    "jenkins_node": "\${NODE_NAME}"
+}
+EOF
+                        """
+                        
+                        echo "✅ Artifacts built successfully"
                     }
                 }
             }
@@ -85,8 +369,93 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     
     post {
         always {
-            echo 'Pipeline completed!'
-            sh 'docker logout'
+            dir('messaging_app') {
+                // Archive artifacts
+                archiveArtifacts artifacts: "${REPORTS_DIR}/**/*", allowEmptyArchive: true
+                archiveArtifacts artifacts: "${COVERAGE_DIR}/**/*", allowEmptyArchive: true
+                archiveArtifacts artifacts: "../messaging-app-*.tar.gz", allowEmptyArchive: true
+                
+                // Clean up virtual environment
+                sh "rm -rf ${VENV_NAME}" 
+            }
+        }
+        
+        success {
+            script {
+                echo "🎉 Pipeline completed successfully!"
+                
+                // Send success notification (configure as needed)
+                emailext (
+                    subject: "✅ Build Success: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                    body: """
+                    <h2>Build Successful! 🎉</h2>
+                    <p><strong>Job:</strong> ${env.JOB_NAME}</p>
+                    <p><strong>Build Number:</strong> ${env.BUILD_NUMBER}</p>
+                    <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
+                    <p><strong>Git Commit:</strong> ${env.GIT_COMMIT}</p>
+                    <p><strong>Build URL:</strong> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                    
+                    <h3>Reports Available:</h3>
+                    <ul>
+                        <li><a href="${env.BUILD_URL}Coverage_Report/">Coverage Report</a></li>
+                        <li><a href="${env.BUILD_URL}Pytest_Report/">Test Report</a></li>
+                        <li><a href="${env.BUILD_URL}artifact/">Build Artifacts</a></li>
+                    </ul>
+                    """,
+                    mimeType: 'text/html',
+                    to: "${env.CHANGE_AUTHOR_EMAIL ?: 'dev-team@company.com'}"
+                )
+            }
+        }
+        
+        failure {
+            script {
+                echo "❌ Pipeline failed!"
+                
+                // Send failure notification
+                emailext (
+                    subject: "❌ Build Failed: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                    body: """
+                    <h2>Build Failed! ❌</h2>
+                    <p><strong>Job:</strong> ${env.JOB_NAME}</p>
+                    <p><strong>Build Number:</strong> ${env.BUILD_NUMBER}</p>
+                    <p><strong>Duration:</strong> ${currentBuild.durationString}</p>
+                    <p><strong>Git Commit:</strong> ${env.GIT_COMMIT}</p>
+                    <p><strong>Build URL:</strong> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                    <p><strong>Console Output:</strong> <a href="${env.BUILD_URL}console">View Logs</a></p>
+                    
+                    <p>Please check the build logs for details and fix the issues.</p>
+                    """,
+                    mimeType: 'text/html',
+                    to: "${env.CHANGE_AUTHOR_EMAIL ?: 'dev-team@company.com'}"
+                )
+            }
+        }
+        
+        unstable {
+            script {
+                echo "⚠️ Pipeline completed with warnings!"
+                
+                // Send unstable notification
+                emailext (
+                    subject: "⚠️ Build Unstable: ${env.JOB_NAME} - ${env.BUILD_NUMBER}",
+                    body: """
+                    <h2>Build Unstable! ⚠️</h2>
+                    <p>The build completed but with some test failures or quality issues.</p>
+                    <p><strong>Job:</strong> ${env.JOB_NAME}</p>
+                    <p><strong>Build Number:</strong> ${env.BUILD_NUMBER}</p>
+                    <p><strong>Build URL:</strong> <a href="${env.BUILD_URL}">${env.BUILD_URL}</a></p>
+                    <p>Please review the test results and fix any issues.</p>
+                    """,
+                    mimeType: 'text/html',
+                    to: "${env.CHANGE_AUTHOR_EMAIL ?: 'dev-team@company.com'}"
+                )
+            }
+        }
+        
+        cleanup {
+            // Clean workspace after build
+            cleanWs()
         }
     }
 }
