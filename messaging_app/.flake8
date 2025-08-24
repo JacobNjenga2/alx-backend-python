@@ -1,0 +1,34 @@
+[flake8]
+max-line-length = 127
+max-complexity = 10
+exclude = 
+    .git,
+    __pycache__,
+    migrations,
+    venv,
+    .venv,
+    .tox,
+    .pytest_cache,
+    node_modules
+
+ignore = 
+    # E203: whitespace before ':'
+    E203,
+    # W503: line break before binary operator
+    W503,
+    # F401: module imported but unused (in __init__.py files)
+    F401
+
+per-file-ignores =
+    # Allow unused imports in __init__.py files
+    __init__.py:F401
+    # Allow long lines in settings files
+    settings.py:E501
+    # Allow unused variables in test files
+    test_*.py:F841
+    # Allow assert statements in test files
+    test_*.py:S101
+
+statistics = True
+count = True
+show-source = True

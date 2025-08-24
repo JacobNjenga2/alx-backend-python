@@ -1,17 +1,11 @@
 pipeline {
     agent any
     
-    environment {
-        // Update with your Docker Hub username
-        DOCKER_IMAGE = 'jacobn/messaging-app'
-        DOCKER_TAG = "${env.BUILD_ID}-${env.GIT_COMMIT.substring(0, 7)}"
-    }
-    
     stages {
         stage('Install Dependencies') {
             steps {
                 dir('messaging_app') {
-                    sh 'pip3 install -r requirements.txt --break-system-packages'
+                    sh 'pip install -r requirements.txt --break-system-packages'
                 }
             }
         }
@@ -20,15 +14,14 @@ pipeline {
             steps {
                 dir('messaging_app') {
                     script {
-                        // Check if any test files exist
                         def testFiles = findFiles(glob: '**/test_*.py')
                         def testDirs = findFiles(glob: '**/tests/**/*.py')
                         
                         if (testFiles.length > 0 || testDirs.length > 0) {
-                            sh 'python3 -m pytest --junitxml=test-results.xml'
+                            sh 'python -m pytest --junitxml=test-results.xml'
                         } else {
-                            echo "No test files found - creating empty test results"
-                            sh 'echo "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?><testsuite name=\\"pytest\\" tests=\\"0\\" failures=\\"0\\"/>" > test-results.xml'
+                            echo 'No test files found - creating empty test results'
+                            sh 'echo \"<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?><testsuite name=\\"pytest\\" tests=\\"0\\" failures=\\"0\\"/>\" > test-results.xml'
                         }
                     }
                 }
@@ -44,42 +37,25 @@ pipeline {
             steps {
                 dir('messaging_app') {
                     script {
-                        // Create Dockerfile if it doesn't exist
                         if (!fileExists('Dockerfile')) {
                             writeFile file: 'Dockerfile', text: '''
-# Use official Python runtime
 FROM python:3.9-slim
-
-# Set working directory
 WORKDIR /app
-
-# Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
-
-# Install system dependencies
 RUN apt-get update && apt-get install -y \
     gcc \
     default-libmysqlclient-dev \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
-
-# Copy requirements and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy application code
 COPY . .
-
-# Expose port
 EXPOSE 8000
-
-# Run application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 '''
                         }
                         
-                        // Build Docker image
                         sh "docker build -t ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} ."
                         sh "docker tag ${env.DOCKER_IMAGE}:${env.DOCKER_TAG} ${env.DOCKER_IMAGE}:latest"
                     }
@@ -91,7 +67,6 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
             steps {
                 dir('messaging_app') {
                     script {
-                        // Login to Docker Hub
                         withCredentials([usernamePassword(
                             credentialsId: 'docker-hub-credentials',
                             usernameVariable: 'DOCKER_USERNAME',
@@ -100,11 +75,8 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
                             sh "echo ${DOCKER_PASSWORD} | docker login -u ${DOCKER_USERNAME} --password-stdin"
                         }
                         
-                        // Push Docker image
                         sh "docker push ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}"
                         sh "docker push ${env.DOCKER_IMAGE}:latest"
-                        
-                        echo "Docker image pushed successfully: ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}"
                     }
                 }
             }
@@ -114,16 +86,7 @@ CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
     post {
         always {
             echo 'Pipeline completed!'
-            // Cleanup: logout from Docker Hub
             sh 'docker logout'
-        }
-        success {
-            echo 'Docker image built and pushed successfully! ✅'
-            echo "Image: ${env.DOCKER_IMAGE}:${env.DOCKER_TAG}"
-            echo "Latest: ${env.DOCKER_IMAGE}:latest"
-        }
-        failure {
-            echo 'Pipeline failed! Please check the logs. ❌'
         }
     }
 }
