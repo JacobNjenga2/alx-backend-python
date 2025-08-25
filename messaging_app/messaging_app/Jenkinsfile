@@ -67,14 +67,22 @@ pipeline {
                         submoduleCfg: [],
                         userRemoteConfigs: [[
                             credentialsId: 'github-credentials',
-                            url: 'https://github.com/yourusername/alx-backend-python.git'
+                            // TODO: Update this URL with your actual GitHub repository
+                            url: 'https://github.com/JacobNjenga2/alx-backend-python.git'
                         ]]
                     ])
                     
                     // Change to messaging_app directory
                     dir('messaging_app') {
                         echo "✅ Code checkout completed"
-                        sh 'pwd && ls -la'
+                        sh '''
+                            pwd && ls -la
+                            echo "📍 Git repository information:"
+                            git branch -a
+                            git log --oneline -5
+                            echo "Current branch: $(git branch --show-current)"
+                            echo "Latest commit: $(git rev-parse HEAD)"
+                        '''
                     }
                 }
             }
@@ -110,16 +118,16 @@ pipeline {
                             source ${VENV_NAME}/bin/activate
                             
                             # Upgrade pip
-                            pip install --upgrade pip
+                            pip3 install --upgrade pip
                             
                             # Install system dependencies (if needed)
                             # sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config gcc
                             
-                            # Install Python dependencies
-                            pip install -r requirements.txt
+                            # Install Python dependencies from root directory
+                            pip3 install -r ../requirements.txt
                             
                             # Install additional testing tools
-                            pip install pytest-html pytest-json-report pytest-xdist
+                            pip3 install pytest-html pytest-json-report pytest-xdist
                             
                             # Verify installations
                             pip list
@@ -243,7 +251,7 @@ pipeline {
                                 --cov-fail-under=70 \\
                                 --maxfail=10 \\
                                 -n auto \\
-                                chats/ messaging_app/ \\
+                                tests/ chats/ messaging_app/ \\
                                 || exit_code=\$?
                             
                             # Generate coverage badge (optional)
