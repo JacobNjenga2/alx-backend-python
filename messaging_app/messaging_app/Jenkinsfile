@@ -123,8 +123,8 @@ pipeline {
                             # Install system dependencies (if needed)
                             # sudo apt-get update && sudo apt-get install -y default-libmysqlclient-dev pkg-config gcc
                             
-                            # Install Python dependencies from root directory
-                            pip3 install -r ../requirements.txt
+                            # Install Python dependencies from messaging_app/requirements.txt
+                            pip3 install -r requirements.txt
                             
                             # Install additional testing tools
                             pip3 install pytest-html pytest-json-report pytest-xdist
